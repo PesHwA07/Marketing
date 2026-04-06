@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketing Intelligence System | Intake Wizard</title>
+    <style>
+        :root { --bg-main: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #3b82f6; --accent-hover: #2563eb; --border: #334155; --input-bg: #020617; --chip-hover: #334155; --input-border: #334155; }
+        [data-theme="light"] { --bg-main: #f1f5f9; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --accent: #2563eb; --accent-hover: #1d4ed8; --border: #e2e8f0; --input-bg: #f8fafc; --chip-hover: #e2e8f0; --input-border: #cbd5e1; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-main); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; padding: 20px; transition: background 0.3s, color 0.3s; }
+        .container { width: 100%; max-width: 800px; margin-top: 20px; position: relative; }
+        .theme-toggle { position: absolute; top: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: 0.2s; }
+        .theme-toggle:hover { border-color: var(--accent); }
+        .wizard-header { margin-bottom: 20px; text-align: center; margin-top: 40px; }
+        .progress-bar-container { background: var(--border); height: 6px; border-radius: 10px; overflow: hidden; margin-top: 15px; }
+        .progress-bar { height: 100%; background: var(--accent); width: 14%; transition: width 0.3s ease; }
+        .step-indicator { font-size: 14px; color: var(--accent); font-weight: 600; margin-top: 8px; display: block; }
+        .card { background: var(--card-bg); padding: 40px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.1); transition: background 0.3s, border-color 0.3s; }
+        h1 { margin: 0; font-size: 24px; color: var(--text-main); }
+        h2 { margin: 0 0 10px 0; font-size: 22px; color: var(--text-main); }
+        p.desc { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--text-main); opacity: 0.9; }
+        .sub-label { font-size: 12px; color: var(--text-muted); margin-top: -4px; margin-bottom: 8px; font-style: italic; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); font-family: inherit; margin-bottom: 20px; transition: border-color 0.2s, background 0.3s, color 0.3s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 100px; }
+        .row { display: flex; gap: 20px; } .col { flex: 1; }
+        .chip-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .chip-group label { background: var(--input-bg); border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; margin: 0; transition: 0.2s; user-select: none; color: var(--text-muted); }
+        .chip-group label:hover { border-color: var(--text-muted); background: var(--chip-hover); }
+        .chip-group input { display: none; }
+        .chip-group input:checked + span { color: white; font-weight: 500; }
+        .chip-group label:has(input:checked) { background: var(--accent); border-color: var(--accent); color: white; }
+        .hidden { display: none; }
+        .conditional-box { background: rgba(59, 130, 246, 0.08); padding: 15px; border-radius: 8px; border-left: 3px solid var(--accent); margin-bottom: 20px; }
+        [data-theme="light"] .conditional-box { background: #eff6ff; }
+        .actions { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+        button { padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-size: 14px; transition: 0.2s; }
+        .btn-next { background: var(--accent); color: white; }
+        .btn-next:hover { opacity: 0.9; }
+        .btn-prev { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-prev:hover { border-color: var(--text-main); color: var(--text-main); }
+        .btn-prev:disabled { opacity: 0.3; cursor: not-allowed; }
+        #loadingOverlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.95); z-index: 100; align-items: center; justify-content: center; flex-direction: column; }
+        [data-theme="light"] #loadingOverlay { background: rgba(255, 255, 255, 0.95); }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(100,100,100,0.2); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* 3-COLUMN MODE GRID */
+        .mode-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        @media(max-width: 650px) { .mode-grid { grid-template-columns: 1fr; } }
+        .mode-card { border: 2px solid var(--border); padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; text-align: center; background: rgba(0,0,0,0.2); }
+        .mode-card:hover { border-color: var(--accent); background: rgba(59, 130, 246, 0.1); }
+        .mode-card.selected { border-color: var(--accent); background: rgba(59, 130, 246, 0.2); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+        .mode-icon { font-size: 26px; display: block; margin-bottom: 8px; }
+        .mode-title { font-weight: bold; font-size: 15px; display: block; color: var(--text-main); margin-bottom: 5px; }
+        .mode-desc { font-size: 11px; color: var(--text-muted); display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" type="button">
+        <span id="themeIcon">☀️</span> <span id="themeText">Light Mode</span>
+    </button>
+
+    <div class="wizard-header">
+        <h1>Strategic Intelligence AI</h1>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <span class="step-indicator" id="stepIndicator">Step 1 of 7</span>
+    </div>
+
+    <form id="wizardForm" action="/submit" method="POST">
+        <div class="card">
+            
+            <div class="step active" id="step1">
+                <h2 style="color:var(--accent);">1. Select Intelligence Mode</h2>
+                <div class="mode-grid">
+                    <div class="mode-card" onclick="selectMode('analysis')">
+                        <span class="mode-icon">📊</span>
+                        <span class="mode-title">Analysis</span>
+                        <span class="mode-desc">1 PDF: Market, SWOT & Trends</span>
+                    </div>
+                    <div class="mode-card" onclick="selectMode('strategy')">
+                        <span class="mode-icon">🚀</span>
+                        <span class="mode-title">Strategy</span>
+                        <span class="mode-desc">1 PDF: Roadmap & Tactics</span>
+                    </div>
+                    <div class="mode-card selected" onclick="selectMode('both')">
+                        <span class="mode-icon">💎</span>
+                        <span class="mode-title">Full System</span>
+                        <span class="mode-desc">Generates BOTH Phase 1 & 2</span>
+                    </div>
+                </div>
+                <input type="hidden" name="report_mode" id="report_mode" value="both">
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0;">
+
+                <h2>Brand & Market Basics</h2>
+                <p class="desc">Define your category and where you want the research to focus.</p>
+
+                <label>Brand / Company Name *</label>
+                <input type="text" name="brand_name" placeholder="e.g. Jahagirdar Foods" required>
+
+                <label>Website URL (Optional)</label>
+                <input type="url" name="website_url" placeholder="https://example.com">
+
+                <div class="row">
+                    <div class="col">
+                        <label>Industry / Category *</label>
+                        <select name="industry" id="industry" required onchange="checkOtherCategory()">
+                            <option value="">Select...</option>
+                            <option value="FMCG">FMCG</option>
+                            <option value="Food & Beverage">Food & Beverage</option>
+                            <option value="Beauty & Personal Care">Beauty & Personal Care</option>
+                            <option value="Health & Wellness">Health & Wellness</option>
+                            <option value="Fashion">Fashion</option>
+                            <option value="EdTech">EdTech</option>
+                            <option value="FinTech">FinTech</option>
+                            <option value="Local Services">Local Services</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Business Stage *</label>
+                        <select name="business_stage" required>
+                            <option value="Idea">Idea Phase</option>
+                            <option value="Pre-launch">Pre-launch</option>
+                            <option value="Launched">Launched</option>
+                            <option value="Scaling">Scaling</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="category_other_wrap" class="hidden conditional-box">
+                    <label>Specify Category *</label>
+                    <input type="text" id="category_other" name="category_other" placeholder="e.g. Home Decor">
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <label>Research Timeline *</label>
+                        <select name="timeline" required>
+                            <option value="ASAP">ASAP</option>
+                            <option value="7 days">7 days</option>
+                            <option value="Flexible">Flexible</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Primary Countries *</label>
+                        <input type="text" name="location" placeholder="e.g. India, UAE" required>
+                    </div>
+                </div>
+                
+                <label>Target Cities (Optional)</label>
+                <input type="text" name="cities" placeholder="e.g. Mumbai, Pune, Nashik">
+            </div>
+
+            <div class="step hidden" id="step2">
+                <h2>2. Research Objective & Decision</h2>
+                <p class="desc">Prevent generic outputs by anchoring research to a real decision.</p>
+
+                <label>Core Business Question *</label>
+                <div class="sub-label">e.g. Which segment should we target for our next 90 days of Meta ads?</div>
+                <textarea name="core_question" required></textarea>
+
+                <label>Primary Objectives (Select up to 5)</label>
+                <div class="chip-group">
+                    <label><input type="checkbox" name="objectives" value="Market sizing"><span>Market sizing</span></label>
+                    <label><input type="checkbox" name="objectives" value="Customer segmentation"><span>Customer segmentation</span></label>
+                    <label><input type="checkbox" name="objectives" value="Competitor analysis"><span>Competitor analysis</span></label>
+                    <label><input type="checkbox" name="objectives" value="Pricing sensitivity"><span>Pricing sensitivity</span></label>
+                    <label><input type="checkbox" name="objectives" value="Messaging"><span>Messaging</span></label>
+                    <label><input type="checkbox" name="objectives" value="Channel strategy"><span>Channel strategy</span></label>
+                </div>
+
+                <label>Decision to Influence *</label>
+                <select name="decision_type" required>
+                    <option value="Launch">Launch</option>
+                    <option value="Scale">Scale</option>
+                    <option value="Pivot">Pivot</option>
+                    <option value="Reprice">Reprice</option>
+                    <option value="Stop">Stop</option>
+                </select>
+
+                <label>Top 3 Assumptions (Optional)</label>
+                <textarea name="assumptions" placeholder="1) ..."></textarea>
+            </div>
+
+            <div class="step hidden" id="step3">
+                <h2>3. Product & Offering</h2>
+                <p class="desc">Anchor research to real product, pricing, and availability.</p>
+
+                <div class="row">
+                    <div class="col">
+                        <label>Product Type *</label>
+                        <select name="product_type" required>
+                            <option value="Physical">Physical</option>
+                            <option value="Digital">Digital</option>
+                            <option value="Subscription">Subscription</option>
+                            <option value="Service">Service</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>USP / Differentiator</label>
+                        <input type="text" name="usp" placeholder="e.g. Baked fresh daily">
+                    </div>
+                </div>
+
+                <label>Short Description *</label>
+                <input type="text" name="product_desc" required>
+
+                <label>Key Features (One per line) *</label>
+                <textarea name="features" required placeholder="High Protein&#10;No Preservatives"></textarea>
+
+                <div class="row">
+                    <div class="col">
+                        <label>Currency</label>
+                        <input type="text" name="currency" value="INR">
+                    </div>
+                    <div class="col">
+                        <label>Min Price</label>
+                        <input type="number" name="price_min" placeholder="0">
+                    </div>
+                    <div class="col">
+                        <label>Max Price</label>
+                        <input type="number" name="price_max" placeholder="1000">
+                    </div>
+                </div>
+
+                <label>Has Subscription? *</label>
+                <select name="has_subscription" id="has_subscription" onchange="toggleSubscription()">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+
+                <div id="subscription_wrap" class="hidden conditional-box">
+                    <label>Subscription Plans (Plan | Price | Cycle) *</label>
+                    <textarea name="subscription_plans" id="subscription_plans" placeholder="Basic | 499 | Monthly"></textarea>
+                </div>
+
+                <label>Availability Channels</label>
+                <div class="chip-group">
+                    <label><input type="checkbox" name="availability" value="D2C"><span>Online D2C</span></label>
+                    <label><input type="checkbox" name="availability" value="Marketplaces"><span>Marketplaces</span></label>
+                    <label><input type="checkbox" name="availability" value="Offline"><span>Offline Retail</span></label>
+                </div>
+            </div>
+
+            <div class="step hidden" id="step4">
+                <h2>4. Target Consumer</h2>
+                <p class="desc">Drives personas and messaging hooks.</p>
+
+                <div class="row">
+                    <div class="col">
+                        <label>Customer Type *</label>
+                        <select name="customer_type">
+                            <option value="Individual">Individual</option>
+                            <option value="Household">Household Buyer</option>
+                            <option value="Business">Business (B2B)</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Income Band *</label>
+                        <select name="income_band">
+                            <option value="Middle">Middle Class</option>
+                            <option value="Upper Middle">Upper Middle</option>
+                            <option value="High">High Income</option>
+                            <option value="Low">Low Income</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label>Age Ranges</label>
+                <div class="chip-group">
+                    <label><input type="checkbox" name="age_range" value="18-24"><span>18-24</span></label>
+                    <label><input type="checkbox" name="age_range" value="25-34"><span>25-34</span></label>
+                    <label><input type="checkbox" name="age_range" value="35-44"><span>35-44</span></label>
+                    <label><input type="checkbox" name="age_range" value="45-54"><span>45-54</span></label>
+                    <label><input type="checkbox" name="age_range" value="55+"><span>55+</span></label>
+                </div>
+
+                <label>Languages (Comma separated) *</label>
+                <input type="text" name="languages" placeholder="English, Hindi, Marathi" required>
+
+                <label>Known Pain Points *</label>
+                <textarea name="pain_points" required placeholder="e.g. Lack of time for cooking..."></textarea>
+
+                <label>Buying Triggers *</label>
+                <textarea name="buying_triggers" required placeholder="e.g. Festive seasons, Health scares..."></textarea>
+            </div>
+
+            <div class="step hidden" id="step5">
+                <h2>5. Current Marketing (Optional)</h2>
+                <p class="desc">Diagnose bottlenecks.</p>
+
+                <label>Active Channels</label>
+                <div class="chip-group">
+                    <label><input type="checkbox" name="platforms" value="Instagram"><span>Instagram</span></label>
+                    <label><input type="checkbox" name="platforms" value="Facebook"><span>Facebook</span></label>
+                    <label><input type="checkbox" name="platforms" value="Google"><span>Google Search</span></label>
+                    <label><input type="checkbox" name="platforms" value="YouTube"><span>YouTube</span></label>
+                    <label><input type="checkbox" name="platforms" value="Offline"><span>Offline</span></label>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <label>Monthly Spend</label>
+                        <select name="monthly_spend">
+                            <option value="0">0</option>
+                            <option value="1-5k">1-5k</option>
+                            <option value="5-20k">5-20k</option>
+                            <option value="20k+">20k+</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Conversion Rate (0-1)</label>
+                        <input type="number" step="0.01" name="conversion_rate" placeholder="0.02">
+                    </div>
+                </div>
+
+                <label>What's Working?</label>
+                <textarea name="whats_working"></textarea>
+                
+                <label>What's NOT Working?</label>
+                <textarea name="whats_not_working"></textarea>
+            </div>
+
+            <div class="step hidden" id="step6">
+                <h2>6. Competitive Landscape</h2>
+                <p class="desc">Improve positioning accuracy.</p>
+
+                <label>Top Competitors (One per line) *</label>
+                <textarea name="competitors" required placeholder="Competitor A | URL&#10;Competitor B"></textarea>
+
+                <label>Brands You Admire</label>
+                <input type="text" name="admired_brands" placeholder="e.g. Amul, Mamaearth">
+
+                <label>Why do customers choose them?</label>
+                <textarea name="competitor_strengths"></textarea>
+            </div>
+
+            <div class="step hidden" id="step7">
+                <h2>7. Output Preferences</h2>
+                <p class="desc">Control tone, compliance, and format.</p>
+
+                <div class="row">
+                    <div class="col">
+                        <label>Brand Personality *</label>
+                        <select name="brand_personality" required>
+                            <option value="Mass">Mass</option>
+                            <option value="Premium">Premium</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Youthful">Youthful</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Output Format *</label>
+                        <select name="output_format" required>
+                            <option value="PDF">PDF Report</option>
+                            <option value="Text">Text Summary</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label>Desired Deliverables</label>
+                <div class="chip-group">
+                    <label><input type="checkbox" name="deliverables" value="Market Report" checked><span>Market Report</span></label>
+                    <label><input type="checkbox" name="deliverables" value="Personas" checked><span>Personas</span></label>
+                    <label><input type="checkbox" name="deliverables" value="Strategy" checked><span>Strategy</span></label>
+                </div>
+
+                <label>Compliance Constraints?</label>
+                <select name="has_compliance" id="has_compliance" onchange="toggleCompliance()">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+
+                <div id="compliance_wrap" class="hidden conditional-box">
+                    <label>Compliance Notes *</label>
+                    <textarea name="compliance_notes" id="compliance_notes" placeholder="e.g. No medical claims"></textarea>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="button" class="btn-prev" id="prevBtn" disabled onclick="changeStep(-1)">Back</button>
+                <button type="button" class="btn-next" id="nextBtn" onclick="changeStep(1)">Next Step</button>
+                <button type="submit" class="btn-next hidden" id="submitBtn">Generate 2 Reports</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <h2 class="loading-text">Processing Market Data...</h2>
+    <p class="loading-sub">This usually takes 30-60 seconds</p>
+</div>
+
+<script>
+    const html = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            html.setAttribute('data-theme', 'light');
+            themeIcon.innerText = '🌙';
+            themeText.innerText = 'Dark Mode';
+        } else {
+            html.setAttribute('data-theme', 'dark');
+            themeIcon.innerText = '☀️';
+            themeText.innerText = 'Light Mode';
+        }
+    }
+
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    applyTheme(savedTheme);
+
+    function toggleTheme() {
+        const current = html.getAttribute('data-theme');
+        const newTheme = current === 'light' ? 'dark' : 'light';
+        applyTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+    }
+
+    let currentStep = 1;
+    const totalSteps = 7;
+
+    function selectMode(mode) {
+        document.getElementById('report_mode').value = mode;
+        document.querySelectorAll('.mode-card').forEach(el => el.classList.remove('selected'));
+        event.currentTarget.classList.add('selected');
+        
+        if (mode === 'both') {
+            document.getElementById('submitBtn').innerText = "Generate 2 Reports";
+        } else {
+            document.getElementById('submitBtn').innerText = "Generate Report";
+        }
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.step').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`step${currentStep}`).classList.remove('hidden');
+
+        const percent = ((currentStep - 1) / (totalSteps - 1)) * 100;
+        document.getElementById('progressBar').style.width = (percent === 0 ? 5 : percent) + '%';
+        document.getElementById('stepIndicator').innerText = `Step ${currentStep} of ${totalSteps}`;
+
+        document.getElementById('prevBtn').disabled = currentStep === 1;
+        
+        if(currentStep === totalSteps) {
+            document.getElementById('nextBtn').classList.add('hidden');
+            document.getElementById('submitBtn').classList.remove('hidden');
+        } else {
+            document.getElementById('nextBtn').classList.remove('hidden');
+            document.getElementById('submitBtn').classList.add('hidden');
+        }
+    }
+
+    function changeStep(dir) {
+        if (dir === 1) {
+            const activeStep = document.getElementById(`step${currentStep}`);
+            const inputs = activeStep.querySelectorAll('input[required], select[required], textarea[required]');
+            let valid = true;
+            inputs.forEach(input => {
+                if (input.offsetParent !== null) {
+                    if (!input.value) {
+                        input.style.borderColor = '#ef4444';
+                        valid = false;
+                    } else {
+                        input.style.borderColor = '';
+                    }
+                }
+            });
+            if (!valid) return;
+        }
+
+        currentStep += dir;
+        updateUI();
+        window.scrollTo(0, 0);
+    }
+
+    function checkOtherCategory() {
+        const val = document.getElementById('industry').value;
+        const wrap = document.getElementById('category_other_wrap');
+        const input = document.getElementById('category_other');
+        
+        wrap.classList.toggle('hidden', val !== 'Other');
+        if (val === 'Other') input.setAttribute('required', 'true');
+        else input.removeAttribute('required');
+    }
+
+    function toggleSubscription() {
+        const val = document.getElementById('has_subscription').value;
+        const wrap = document.getElementById('subscription_wrap');
+        const input = document.getElementById('subscription_plans');
+        
+        wrap.classList.toggle('hidden', val !== 'Yes');
+        if (val === 'Yes') input.setAttribute('required', 'true');
+        else input.removeAttribute('required');
+    }
+
+    function toggleCompliance() {
+        const val = document.getElementById('has_compliance').value;
+        const wrap = document.getElementById('compliance_wrap');
+        const input = document.getElementById('compliance_notes');
+        
+        wrap.classList.toggle('hidden', val !== 'Yes');
+        if (val === 'Yes') input.setAttribute('required', 'true');
+        else input.removeAttribute('required');
+    }
+
+    document.getElementById('wizardForm').onsubmit = function() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    };
+
+    updateUI();
+    checkOtherCategory();
+    toggleSubscription();
+    toggleCompliance();
+</script>
+
+</body>
+</html>
