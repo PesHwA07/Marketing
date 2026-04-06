@@ -10,8 +10,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.colors import HexColor
-
-# 1. CONFIGURATION
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "agency_internal_tool_v2")
@@ -19,7 +17,6 @@ app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "agency_internal_tool_v2")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Groq (Llama 3.3 70B)
 api_key = os.getenv("GROQ_API_KEY")
 
 if not api_key:
@@ -31,12 +28,11 @@ client = Groq(api_key=api_key)
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# 2. TARGETED INTELLIGENCE SEARCH
 def safe_search(query, max_retries=3):
     wait_time = 2
     for attempt in range(max_retries):
         try:
-            time.sleep(random.uniform(1.0, 3.0)) 
+            time.sleep(random.uniform(1.0, 3.0))
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=6, backend="html"))
                 if results: return results
@@ -53,8 +49,6 @@ def fetch_targeted_intel(data, report_mode):
     comps = data.get('competitors', 'Competitors').split('\n')[0]
 
     context_buffer = []
-
-    # MODE A: SINGLE ANALYSIS SEARCH
     if report_mode == "analysis":
         q1 = f"{ind} market trends growth decline innovations financial costs {loc} 2026"
         q2 = f"{comps} complaints reviews problems site:reddit.com OR site:trustpilot.com"
@@ -64,8 +58,6 @@ def fetch_targeted_intel(data, report_mode):
         blob2 = "\n".join([f"- {r['body'][:400]}..." for r in r2])
         context_buffer.append(f"=== MARKET LANDSCAPE & FINANCIALS ===\n{blob1}")
         context_buffer.append(f"=== COMPETITOR FLAWS & REVIEWS ===\n{blob2}")
-
-    # MODE B: SINGLE STRATEGY SEARCH
     elif report_mode == "strategy":
         q1 = f"{ind} market gaps unmet needs growth hacks case studies {loc}"
         q2 = f"{ind} {comps} marketing channels subscription models positioning {loc}"
@@ -75,8 +67,6 @@ def fetch_targeted_intel(data, report_mode):
         blob2 = "\n".join([f"- {r['body'][:400]}..." for r in r2])
         context_buffer.append(f"=== GAPS & WINNING TACTICS ===\n{blob1}")
         context_buffer.append(f"=== CHANNEL & PRICING DATA ===\n{blob2}")
-
-    # MODE C: BOTH (FULL 3-QUERY SEARCH)
     else:
         q1 = f"{ind} market size trends innovations financial costs {loc} 2026"
         q2 = f"{comps} complaints reviews issues site:reddit.com OR site:trustpilot.com"
@@ -91,8 +81,6 @@ def fetch_targeted_intel(data, report_mode):
         context_buffer.append(f"=== WINNING TACTICS ===\n{blob3}")
 
     return "\n\n".join(context_buffer)
-
-# 3. DYNAMIC ARCHETYPE LOGIC
 def determine_archetype(data):
     p_type = data.get('product_type', 'Physical')
     ind = data.get('industry', '')
@@ -108,8 +96,6 @@ def get_financial_guardrails(archetype):
     if archetype == "SERVICE_BIZ": return "Benchmark: 70-80% Gross Margin | CAC Low (Referral) | Net Margin 30-40%"
     if archetype == "FASHION_RETAIL": return "Benchmark: 50-60% Gross Margin | High Return Rates (20%) | Seasonal Inventory risks"
     return "Benchmark: 50% Gross Margin | Net Margin 10-15% | Standard Retail costs"
-
-# 4. LLAMA 3 GENERATOR (8/10 Quality)
 def call_groq(prompt, system_role):
     try:
         completion = client.chat.completions.create(
@@ -118,8 +104,8 @@ def call_groq(prompt, system_role):
                 {"role": "system", "content": system_role},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.4, 
-            max_tokens=6500 
+            temperature=0.4,
+            max_tokens=6500
         )
         return completion.choices[0].message.content
     except Exception as e:
@@ -190,7 +176,7 @@ def generate_deep_report(data, web_data, archetype, phase_type):
         - <b>Threats (External):</b> [Competitor moves & market downfall risks].<br/>
         """
         
-    else: # Strategy
+    else:
         role = f"You are a visionary Chief Strategy Officer (CSO) in the {data['industry']} sector. Output strictly formatted HTML."
         prompt = f"""
         TASK: Produce a customized "Strategic Execution Playbook".
@@ -215,8 +201,6 @@ def generate_deep_report(data, web_data, archetype, phase_type):
         """
 
     return call_groq(prompt, role)
-
-# 5. PDF ENGINE
 def create_pdf(filename, content, title):
     filepath = os.path.join(OUTPUT_DIR, filename)
     doc = SimpleDocTemplate(filepath, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
@@ -235,8 +219,6 @@ def create_pdf(filename, content, title):
              story.append(Spacer(1, 6))
             
     doc.build(story)
-
-# 6. ROUTES
 @app.route("/")
 def home(): return render_template("index.html")
 
@@ -254,8 +236,6 @@ def submit():
     
     if data.get('industry') == 'Other':
         data['industry'] = data.get('category_other', 'General')
-
-    # Get user mode (analysis, strategy, or both)
     report_mode = data.get('report_mode', 'both')
     
     archetype = determine_archetype(data)
@@ -264,18 +244,14 @@ def submit():
     pdf_file_1 = None
     pdf_file_2 = None
     report_type_display = "Full Intelligence (2 Reports)"
-    
-    # Generate Analysis if requested
     if report_mode in ['analysis', 'both']:
         logger.info("Generating Phase 1: Analysis...")
         content_1 = generate_deep_report(data, web_context, archetype, "analysis")
         pdf_file_1 = f"{data['brand_name']}_Analysis.pdf".replace(" ", "_")
         create_pdf(pdf_file_1, content_1, f"Market Research: {data['brand_name']}")
         if report_mode == 'analysis': report_type_display = "Deep Analysis"
-
-    # Generate Strategy if requested
     if report_mode in ['strategy', 'both']:
-        if report_mode == 'both': time.sleep(2) # Prevent API rate limit
+        if report_mode == 'both': time.sleep(2)
         logger.info("Generating Phase 2: Strategy...")
         content_2 = generate_deep_report(data, web_context, archetype, "strategy")
         pdf_file_2 = f"{data['brand_name']}_Strategy.pdf".replace(" ", "_")
