@@ -20,10 +20,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize Groq (Llama 3.3 70B)
-try:
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-except:
-    logger.error("⚠️ CRITICAL: GROQ_API_KEY missing.")
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    logger.error("❌ GROQ_API_KEY is missing or not loaded.")
+    raise ValueError("GROQ_API_KEY not found in environment variables")
+
+client = Groq(api_key=api_key)
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
